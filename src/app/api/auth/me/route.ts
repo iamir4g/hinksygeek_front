@@ -17,13 +17,25 @@ export async function GET() {
   }
 
   const url = new URL("/api/users/me", getStrapiBaseUrl());
-  const res = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${jwt}`,
-    },
-    cache: "no-store",
-  });
+  let res: Response | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      res = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        cache: "no-store",
+      });
+      break;
+    } catch {
+      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+    }
+  }
+
+  if (!res) {
+    return NextResponse.json({ user: null }, { status: 503 });
+  }
 
   if (!res.ok) {
     const response = NextResponse.json({ user: null }, { status: 401 });
@@ -39,9 +51,11 @@ export async function GET() {
     return response;
   }
 
-  const user = (await res.json().catch(() => null)) as
-    | { id?: number; username?: string; email?: string }
-    | null;
+  const user = (await res.json().catch(() => null)) as {
+    id?: number;
+    username?: string;
+    email?: string;
+  } | null;
 
   if (!user || typeof user.id !== "number") {
     return NextResponse.json({ user: null }, { status: 401 });
@@ -51,4 +65,3 @@ export async function GET() {
     user: { id: user.id, username: user.username, email: user.email },
   });
 }
-

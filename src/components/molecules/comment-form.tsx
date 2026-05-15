@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 
 export function CommentForm({
   gameId,
+  gameSlug,
   onSubmitted,
 }: {
   gameId: number | string;
+  gameSlug: string;
   onSubmitted?: () => void;
 }) {
   const [content, setContent] = React.useState("");
@@ -29,7 +31,7 @@ export function CommentForm({
       const res = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: trimmed, gameId }),
+        body: JSON.stringify({ content: trimmed, gameId, gameSlug }),
       });
 
       const json = (await res.json().catch(() => null)) as {

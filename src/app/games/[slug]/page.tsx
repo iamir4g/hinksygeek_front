@@ -90,19 +90,27 @@ export default async function GamePage({
     .map((x) => x.g);
 
   const publisherName =
-    (getNested(game.publisher, ["data", "attributes", "name"]) as string | undefined) ??
+    (getNested(game.publisher, ["data", "attributes", "name"]) as
+      | string
+      | undefined) ??
     (getNested(game.publisher, ["name"]) as string | undefined) ??
     null;
   const publisherSlug =
-    (getNested(game.publisher, ["data", "attributes", "slug"]) as string | undefined) ??
+    (getNested(game.publisher, ["data", "attributes", "slug"]) as
+      | string
+      | undefined) ??
     (getNested(game.publisher, ["slug"]) as string | undefined) ??
     null;
   const designerName =
-    (getNested(game.designer, ["data", "attributes", "name"]) as string | undefined) ??
+    (getNested(game.designer, ["data", "attributes", "name"]) as
+      | string
+      | undefined) ??
     (getNested(game.designer, ["name"]) as string | undefined) ??
     null;
   const designerSlug =
-    (getNested(game.designer, ["data", "attributes", "slug"]) as string | undefined) ??
+    (getNested(game.designer, ["data", "attributes", "slug"]) as
+      | string
+      | undefined) ??
     (getNested(game.designer, ["slug"]) as string | undefined) ??
     null;
 
@@ -166,7 +174,10 @@ export default async function GamePage({
               <CardContent className="pt-0">
                 <ComplexityMeter value={complexity} className="w-full" />
                 <div className="mt-4">
-                  <WishlistButton slug={slug} />
+                  <WishlistButton
+                    gameSlug={slug}
+                    gameId={game.id ?? game.documentId}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -183,7 +194,7 @@ export default async function GamePage({
             <div className="mt-4">
               <CommentSection
                 gameSlug={slug}
-                gameId={game.documentId ?? game.id}
+                gameId={game.id ?? game.documentId}
               />
             </div>
           </div>
