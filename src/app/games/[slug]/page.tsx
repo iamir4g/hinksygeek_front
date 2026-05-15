@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ComplexityMeter } from "@/components/molecules/complexity-meter";
 import { RatingStars } from "@/components/molecules/rating-stars";
 import { GameCard } from "@/components/molecules/game-card";
+import { CommentSection } from "@/components/organisms/comment-section";
 import { GameGallery } from "@/components/organisms/game-gallery";
 import { WishlistButton } from "@/components/organisms/wishlist-button";
 import { cn } from "@/lib/utils";
@@ -88,17 +89,22 @@ export default async function GamePage({
     .slice(0, 6)
     .map((x) => x.g);
 
-  const commentsRel = game.comments as unknown;
-  const commentData = getNested(commentsRel, ["data"]);
-  const comments = Array.isArray(commentData)
-    ? commentData
-        .map(
-          (e) => getNested(e, ["attributes", "text"]) ?? getNested(e, ["text"]),
-        )
-        .filter(
-          (v): v is string => typeof v === "string" && v.trim().length > 0,
-        )
-    : [];
+  const publisherName =
+    (getNested(game.publisher, ["data", "attributes", "name"]) as string | undefined) ??
+    (getNested(game.publisher, ["name"]) as string | undefined) ??
+    null;
+  const publisherSlug =
+    (getNested(game.publisher, ["data", "attributes", "slug"]) as string | undefined) ??
+    (getNested(game.publisher, ["slug"]) as string | undefined) ??
+    null;
+  const designerName =
+    (getNested(game.designer, ["data", "attributes", "name"]) as string | undefined) ??
+    (getNested(game.designer, ["name"]) as string | undefined) ??
+    null;
+  const designerSlug =
+    (getNested(game.designer, ["data", "attributes", "slug"]) as string | undefined) ??
+    (getNested(game.designer, ["slug"]) as string | undefined) ??
+    null;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -117,6 +123,25 @@ export default async function GamePage({
             <Heading className="text-3xl">{game.title ?? "Untitled"}</Heading>
             <div className="mt-3">
               <RatingStars rating={rating} />
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-300">
+              {publisherName && publisherSlug ? (
+                <Link
+                  href={`/publishers/${publisherSlug}`}
+                  className="hover:text-zinc-100 hover:underline"
+                >
+                  Publisher: {publisherName}
+                </Link>
+              ) : null}
+              {designerName && designerSlug ? (
+                <Link
+                  href={`/designers/${designerSlug}`}
+                  className="hover:text-zinc-100 hover:underline"
+                >
+                  Designer: {designerName}
+                </Link>
+              ) : null}
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">
@@ -155,22 +180,11 @@ export default async function GamePage({
         <div className="mt-12 grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <Heading className="text-xl">User Reviews</Heading>
-            <div className="mt-4 space-y-3">
-              {comments.length === 0 ? (
-                <Card>
-                  <CardContent className="pt-4 text-sm text-slate-300">
-                    No reviews yet.
-                  </CardContent>
-                </Card>
-              ) : (
-                comments.slice(0, 6).map((text, idx) => (
-                  <Card key={`${idx}-${text.slice(0, 8)}`}>
-                    <CardContent className="pt-4 text-sm text-slate-200">
-                      {text}
-                    </CardContent>
-                  </Card>
-                ))
-              )}
+            <div className="mt-4">
+              <CommentSection
+                gameSlug={slug}
+                gameId={game.documentId ?? game.id}
+              />
             </div>
           </div>
 

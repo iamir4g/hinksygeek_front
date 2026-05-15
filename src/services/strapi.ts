@@ -56,7 +56,32 @@ async function fetchJson<T>(path: string, options?: FetchOptions): Promise<T> {
 }
 
 function unwrap<T>(entity: { attributes?: T } & Partial<T>): T {
-  return (entity.attributes ?? entity) as T;
+  const attributes = (entity.attributes ?? entity) as T;
+  if (!attributes || typeof attributes !== "object") return attributes;
+  const id = (entity as { id?: number }).id;
+  const documentId = (entity as { documentId?: string }).documentId;
+  return {
+    ...(typeof id === "number" ? { id } : {}),
+    ...(typeof documentId === "string" ? { documentId } : {}),
+    ...(attributes as Record<string, unknown>),
+  } as T;
+}
+
+function withPopulate(path: string, populate: string[]) {
+  const qs = new URLSearchParams();
+  populate.forEach((p, idx) => qs.set(`populate[${idx}]`, p));
+  return `${path}?${qs.toString()}`;
+}
+
+function withPopulateAndFilters(
+  path: string,
+  populate: string[],
+  filters: Record<string, string>,
+) {
+  const qs = new URLSearchParams();
+  populate.forEach((p, idx) => qs.set(`populate[${idx}]`, p));
+  Object.entries(filters).forEach(([k, v]) => qs.set(k, v));
+  return `${path}?${qs.toString()}`;
 }
 
 export function getStrapiMediaUrl(url?: string | null) {
@@ -75,7 +100,15 @@ type RelationMany<T> =
   | Array<T>
   | undefined;
 
+type RelationOne<T> =
+  | { data?: ({ id: number; documentId?: string; attributes?: T } & T) | null }
+  | ({ id?: number; documentId?: string; attributes?: T } & Partial<T>)
+  | undefined
+  | null;
+
 export type Game = {
+  id?: number;
+  documentId?: string;
   title?: string;
   slug?: string;
   description?: string;
@@ -88,28 +121,92 @@ export type Game = {
   images?: RelationMany<StrapiMedia>;
   categories?: RelationMany<{ name?: string; slug?: string }>;
   mechanics?: RelationMany<{ name?: string; slug?: string }>;
-  publisher?: { data?: { id: number; attributes?: { name?: string } } };
-  designer?: { data?: { id: number; attributes?: { name?: string } } };
-  comments?: RelationMany<{ text?: string; user?: unknown }>;
+  publisher?: RelationOne<{ name?: string; slug?: string }>;
+  designer?: RelationOne<{ name?: string; slug?: string }>;
+};
+
+export type Publisher = {
+  id?: number;
+  documentId?: string;
+  name?: string;
+  slug?: string;
+  bio?: string;
+  logo?: RelationOne<StrapiMedia>;
+  games?: RelationMany<Game>;
+};
+
+export type Designer = {
+  id?: number;
+  documentId?: string;
+  name?: string;
+  slug?: string;
+  bio?: string;
+  logo?: RelationOne<StrapiMedia>;
+  games?: RelationMany<Game>;
 };
 
 export async function getGames() {
-  const res = await fetchJson<StrapiCollectionResponse<Game>>(
-    "/api/games?populate=images,categories,mechanics",
-    { cache: "no-store" },
-  );
+  const url = withPopulate("/api/games", [
+    "images",
+    "categories",
+    "mechanics",
+    "publisher",
+  ]);
+  const res = await fetchJson<StrapiCollectionResponse<Game>>(url, {
+    cache: "no-store",
+  });
   return res.data.map((e) => unwrap<Game>(e));
 }
 
 export async function getGameBySlug(slug: string) {
-  const qs = new URLSearchParams();
-  qs.set("populate", "images,categories,mechanics,publisher,designer,comments");
-  qs.set("filters[slug][$eq]", slug);
-
-  const res = await fetchJson<StrapiCollectionResponse<Game>>(
-    `/api/games?${qs.toString()}`,
-    { cache: "no-store" },
+  const url = withPopulateAndFilters(
+    "/api/games",
+    ["images", "categories", "mechanics", "publisher", "designer"],
+    { "filters[slug][$eq]": slug },
   );
+  const res = await fetchJson<StrapiCollectionResponse<Game>>(url, {
+    cache: "no-store",
+  });
   const first = res.data[0];
   return first ? unwrap<Game>(first) : null;
+}
+
+export async function getPublisherBySlug(slug: string) {
+  const url = withPopulateAndFilters(
+    "/api/publishers",
+    [
+      "logo",
+      "games",
+      "games.images",
+      "games.categories",
+      "games.mechanics",
+      "games.publisher",
+    ],
+    { "filters[slug][$eq]": slug },
+  );
+  const res = await fetchJson<StrapiCollectionResponse<Publisher>>(url, {
+    cache: "no-store",
+  });
+  const first = res.data[0];
+  return first ? unwrap<Publisher>(first) : null;
+}
+
+export async function getDesignerBySlug(slug: string) {
+  const url = withPopulateAndFilters(
+    "/api/designers",
+    [
+      "logo",
+      "games",
+      "games.images",
+      "games.categories",
+      "games.mechanics",
+      "games.publisher",
+    ],
+    { "filters[slug][$eq]": slug },
+  );
+  const res = await fetchJson<StrapiCollectionResponse<Designer>>(url, {
+    cache: "no-store",
+  });
+  const first = res.data[0];
+  return first ? unwrap<Designer>(first) : null;
 }

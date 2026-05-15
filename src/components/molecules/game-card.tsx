@@ -44,10 +44,20 @@ function getComplexityLevel(game: Game) {
   return Math.max(1, Math.min(5, Math.round(v)));
 }
 
+function getPublisherName(game: Game) {
+  const rel = game.publisher as unknown;
+  return (
+    (getNested(rel, ["data", "attributes", "name"]) as string | undefined) ??
+    (getNested(rel, ["name"]) as string | undefined) ??
+    null
+  );
+}
+
 export function GameCard({ game }: { game: Game }) {
   const imageUrl = getFirstImageUrl(game);
   const rating = getRating(game);
   const complexity = getComplexityLevel(game);
+  const publisherName = getPublisherName(game);
 
   return (
     <Link
@@ -86,6 +96,9 @@ export function GameCard({ game }: { game: Game }) {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
+            {publisherName ? (
+              <Badge variant="accent">{publisherName}</Badge>
+            ) : null}
             <Badge>
               {game.minPlayers ?? "?"}–{game.maxPlayers ?? "?"} players
             </Badge>
